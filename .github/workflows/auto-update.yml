@@ -1,0 +1,31 @@
+name: 自動更新抽獎清單
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 代表每 6 小時自動執行一次（你可以改成 '0 0 * * *' 每天執行一次）
+  workflow_dispatch: # 允許你在 GitHub 網站上手動點擊按鈕強制執行
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 賦予 GitHub Actions 寫入程式碼庫的權限
+    steps:
+      - name: 取得專案程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Node.js 環境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 執行更新腳本
+        run: node update.js
+
+      - name: 自動提交並推送到 GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "🤖 自動更新最新各縣市抽獎清單" || exit 0
+          git push
