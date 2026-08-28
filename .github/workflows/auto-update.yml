@@ -12,15 +12,15 @@ jobs:
       contents: write
     steps:
       - name: 取得專案程式碼
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 設定 Node.js 環境
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
 
       - name: 安裝相依套件 (cheerio)
-        run: npm install  # <--- 加上這行，機器人才會去讀 package.json 安裝 cheerio
+        run: npm install
 
       - name: 執行更新腳本
         run: node update.js
