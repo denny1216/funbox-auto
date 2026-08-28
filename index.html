@@ -3,33 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funbox 手動貼上版抽獎面板</title>
+    <title>Funbox 自動化抽獎面板（含獨立狀態紀錄）</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
+            padding: 20px;
             background-color: #1e1e1e;
             color: white;
             text-align: center;
         }
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
         #mainBtn {
-            width: 85%;
-            height: 250px;
-            font-size: 36px;
+            width: 100%;
+            height: 220px;
+            font-size: 32px;
             font-weight: bold;
-            border-radius: 24px;
+            border-radius: 20px;
             background-color: #06C755;
             color: white;
             border: none;
             cursor: pointer;
             box-shadow: 0 10px 25px rgba(6, 199, 85, 0.4);
             transition: transform 0.1s;
-            line-height: 1.5;
+            line-height: 1.4;
+            margin-top: 20px;
         }
         #mainBtn:active {
             transform: scale(0.95);
@@ -41,33 +45,89 @@
             transform: none;
         }
         #status {
-            margin-top: 30px;
-            font-size: 24px;
+            margin-top: 20px;
+            font-size: 20px;
             color: #00ff00;
         }
-        #resetBtn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button.tool-btn {
+            padding: 8px 14px;
             background-color: #444;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 14px;
             cursor: pointer;
+        }
+        button.tool-btn:hover {
+            background-color: #666;
+        }
+        #listContainer {
+            margin-top: 30px;
+            text-align: left;
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .store-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid #3c3c3c;
+            font-size: 14px;
+        }
+        .store-item:last-child {
+            border-bottom: none;
+        }
+        .store-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
+        .store-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .status-un-drawn {
+            background-color: #ff4444;
+            color: white;
+        }
+        .status-drawn {
+            background-color: #2e7d32;
+            color: #ccc;
         }
     </style>
 </head>
 <body>
 
-    <button id="resetBtn">🔄 重新開始</button>
-    <button id="mainBtn">👉 點我抽獎 👈<br>(將跳轉至 LINE)</button>
-    <div id="status"></div>
+    <div class="container">
+        <div class="toolbar">
+            <span id="progressText" style="font-size: 16px; color: #aaa;">已完成: 0 / 0</span>
+            <button class="tool-btn" id="resetBtn">🔄 全部重設為未抽</button>
+        </div>
+
+        <button id="mainBtn">👉 點我抽下一個 👈</button>
+        <div id="status">準備就緒</div>
+
+        <!-- 下方清單：顯示每個網址的狀態 -->
+        <div id="listContainer"></div>
+    </div>
 
     <script>
-        // 這裡直接把抽獎網址放進來（你可以隨時增加或修改）
-        // 只要把從 Funbox 複製到的 LINE 網址貼在下面這串雙引號裡面即可
+        // 把你剛才收集到的整串網址貼在這邊
         let links = [
     "https://lin.ee/9xvdY8S",
     "https://lin.ee/xxqkyvC",
@@ -903,49 +963,97 @@
     "https://lin.ee/Vy6fpBO"
 ];
 
-        let currentIndex = parseInt(localStorage.getItem('funbox_manual_index') || '0');
+        // 從 localStorage 讀取狀態紀錄（若無則全部初始化為 false 代表未抽選）
+        let drawnStatus = JSON.parse(localStorage.getItem('funbox_drawn_status')) || new Array(links.length).fill(false);
 
         const mainBtn = document.getElementById('mainBtn');
         const statusDiv = document.getElementById('status');
+        const progressText = document.getElementById('progressText');
+        const listContainer = document.getElementById('listContainer');
         const resetBtn = document.getElementById('resetBtn');
 
-        function updateUI() {
-            if (currentIndex >= links.length) {
-                mainBtn.innerText = '🎉\n全部門市抽完囉！';
+        // 渲染下方的清單
+        function renderList() {
+            listContainer.innerHTML = '';
+            let completedCount = 0;
+
+            links.forEach((url, index) => {
+                if (drawnStatus[index]) completedCount++;
+
+                let item = document.createElement('div');
+                item.className = 'store-item';
+
+                let nameSpan = document.createElement('span');
+                nameSpan.className = 'store-name';
+                nameSpan.innerText = `${index + 1}. ${url}`;
+
+                let statusSpan = document.createElement('span');
+                statusSpan.className = `store-status ${drawnStatus[index] ? 'status-drawn' : 'status-un-drawn'}`;
+                statusSpan.innerText = drawnStatus[index] ? '已抽選' : '未抽選';
+                
+                // 點擊清單中的狀態標籤可以手動切換 (已抽選 <-> 未抽選)
+                statusSpan.addEventListener('click', () => {
+                    drawnStatus[index] = !drawnStatus[index];
+                    saveAndRefresh();
+                });
+
+                item.appendChild(nameSpan);
+                item.appendChild(statusSpan);
+                listContainer.appendChild(item);
+            });
+
+            progressText.innerText = `已完成: ${completedCount} / ${links.length}`;
+
+            if (completedCount >= links.length) {
+                mainBtn.innerText = '🎉\n全部門市都抽完囉！';
                 mainBtn.disabled = true;
-                statusDiv.innerText = `最終進度：${links.length} / ${links.length}`;
+                statusDiv.innerText = '大功告成！';
             } else {
-                mainBtn.innerText = '👉 點我抽獎 👈\n(將跳轉至 LINE)';
+                mainBtn.innerText = '👉 點我抽下一個 👈\n(自動跳過已抽過的)';
                 mainBtn.disabled = false;
-                statusDiv.innerText = `目前進度：${currentIndex + 1} / ${links.length}`;
+                statusDiv.innerText = `準備抽取下一個未抽選項目`;
             }
         }
 
+        function saveAndRefresh() {
+            localStorage.setItem('funbox_drawn_status', JSON.stringify(drawnStatus));
+            renderList();
+        }
+
+        // 點擊大按鈕時的邏輯：自動尋找下一個「還沒抽」的網址
         mainBtn.addEventListener('click', () => {
-            if (currentIndex < links.length) {
-                let currentUrl = links[currentIndex];
-                
-                currentIndex++;
-                localStorage.setItem('funbox_manual_index', currentIndex.toString());
-                updateUI();
-                
-                let a = document.createElement('a');
-                a.href = currentUrl;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+            let nextIndex = drawnStatus.indexOf(false); // 尋找第一個未抽選的索引
+
+            if (nextIndex === -1) {
+                alert('所有項目都已經抽完了！');
+                renderList();
+                return;
             }
+
+            let targetUrl = links[nextIndex];
+
+            // 標記該項目為已抽選
+            drawnStatus[nextIndex] = true;
+            saveAndRefresh();
+
+            // 開啟 LINE 抽選連結
+            let a = document.createElement('a');
+            a.href = targetUrl;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         });
 
+        // 重設全部按鈕
         resetBtn.addEventListener('click', () => {
-            if(confirm('確定要從第 1 家重新開始抽嗎？')) {
-                localStorage.removeItem('funbox_manual_index');
-                currentIndex = 0;
-                updateUI();
+            if (confirm('確定要將所有項目的抽選紀錄全部清空嗎？')) {
+                drawnStatus = new Array(links.length).fill(false);
+                saveAndRefresh();
             }
         });
 
-        updateUI();
+        // 初始化執行
+        renderList();
     </script>
 </body>
 </html>
