@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funbox 自動化抽獎面板（進階篩選版）</title>
+    <title>Funbox 自動化抽獎面板（即時抓取版）</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -32,6 +32,7 @@
             cursor: pointer;
             box-shadow: 0 10px 25px rgba(6, 199, 85, 0.4);
             margin-top: 15px;
+            transition: 0.3s;
         }
         #mainBtn:disabled {
             background-color: #555;
@@ -58,11 +59,8 @@
             border-radius: 6px;
             cursor: pointer;
         }
-        button.tool-btn:hover {
-            background-color: #666;
-        }
+        button.tool-btn:hover { background-color: #666; }
         
-        /* 篩選面板樣式 */
         .filter-section {
             background: #2a2a2a;
             border-radius: 12px;
@@ -95,7 +93,6 @@
             border-color: #06C755;
             font-weight: bold;
         }
-
         #listContainer {
             margin-top: 20px;
             text-align: left;
@@ -113,13 +110,8 @@
             border-bottom: 1px solid #3c3c3c;
             font-size: 14px;
         }
-        .store-name a {
-            color: #4da6ff;
-            text-decoration: none;
-        }
-        .store-name a:hover {
-            text-decoration: underline;
-        }
+        .store-name a { color: #4da6ff; text-decoration: none; }
+        .store-name a:hover { text-decoration: underline; }
         .city-tag {
             background-color: #444;
             color: #ffcc00;
@@ -139,9 +131,26 @@
         }
         .status-un-drawn { background-color: #ff4444; color: white; }
         .status-drawn { background-color: #2e7d32; color: #ccc; }
+        
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid #06C755;
+            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <!-- 載入中遮罩 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div style="margin-top: 15px; font-size: 18px; color: white;" id="loadingText">正在向 Funbox 即時抓取最新抽獎清單...</div>
+    </div>
 
     <div class="container">
         <div class="toolbar">
@@ -149,82 +158,32 @@
             <button class="tool-btn" id="resetBtn">🔄 全部重設紀錄</button>
         </div>
 
-        <!-- 區域篩選 -->
         <div class="filter-section">
             <div class="filter-title">📍 區域篩選</div>
             <div class="filter-container" id="cityFilterContainer"></div>
         </div>
 
-        <!-- 代號/系列篩選 -->
         <div class="filter-section">
             <div class="filter-title">🏷️ 代號/陀螺篩選</div>
             <div class="filter-container" id="seriesFilterContainer"></div>
         </div>
 
-        <button id="mainBtn">👉 載入中... 👈</button>
-        <div id="status">請稍候</div>
+        <button id="mainBtn" disabled>👉 載入中... 👈</button>
+        <div id="status">正在同步資料</div>
 
         <div id="listContainer"></div>
     </div>
 
     <script>
-        // START_OF_LINKS
-        const links = [
-            { city: "台北市", url: "https://lin.ee/9xvdY8S", name: "BX-10 極限衝擊戰鬥盤" },
-            { city: "台北市", url: "https://lin.ee/xxqkyvC", name: "BX-25 戰鬥陀螺X專業收納包" },
-            { city: "台北市", url: "https://lin.ee/yP3r8Lq", name: "BX-37 雙重極限衝擊戰鬥盤 豪華組" },
-            { city: "台北市", url: "https://lin.ee/QrlSYOm", name: "BX-40 發射器(酒紅)" },
-            { city: "台北市", url: "https://lin.ee/TmhBnu9", name: "BX-45 武士魂斬" },
-            { city: "台北市", url: "https://lin.ee/zrGLkVA", name: "BX-51 旋風發射器 黑綠" },
-            { city: "台北市", url: "https://lin.ee/xe0367ja", name: "BX-57 3V3對戰收納盒 黑" },
-            { city: "台北市", url: "https://lin.ee/suYW8By", name: "UX-02 惡魔戰錘" },
-            { city: "台北市", url: "https://lin.ee/tratm8F", name: "UX-19 子彈獅鷲H" },
-            { city: "台北市", url: "https://lin.ee/XoUgnBE", name: "CX-18 腕龍鞭打 隨機強化組" },
-            { city: "台北市", url: "https://lin.ee/qt4wA06", name: "BX-00 暴風天馬" },
-            { city: "台北市", url: "https://lin.ee/tn0jSx7", name: "BX-10 極限衝擊戰鬥盤" },
-            { city: "台北市", url: "https://lin.ee/x9ejtfu", name: "BX-18 X旋風發射器" },
-            { city: "台北市", url: "https://lin.ee/t5DzC6W", name: "BX-25 戰鬥陀螺專業收納包" },
-            { city: "台北市", url: "https://lin.ee/O6A5Qu4", name: "BX-26 獨角刺心" },
-            { city: "台北市", url: "https://lin.ee/VwXtHSw", name: "BX-32 寬型極限衝擊戰鬥盤" },
-            { city: "台北市", url: "https://lin.ee/yDuMJqF", name: "BX-33 皓戰猛虎" },
-            { city: "台北市", url: "https://lin.ee/sjANMnS", name: "BX-35 隨機強化組 Vol.04" },
-            { city: "台北市", url: "https://lin.ee/nlNO7zU", name: "BX-40 發射器" },
-            { city: "台北市", url: "https://lin.ee/uaBy3wh", name: "BX-50 天堂日輪隨機強化組" },
-            { city: "台北市", url: "https://lin.ee/PIePz1a", name: "BX-51 旋風發射器 黑綠" },
-            { city: "台北市", url: "https://lin.ee/7wo6hoR", name: "BX-57 3on3 戰術陀螺收納盒" },
-            { city: "台北市", url: "https://lin.ee/7pFR6OL", name: "UX-02 惡魔戰錘" },
-            { city: "台北市", url: "https://lin.ee/wBvFN2J", name: "UX-20 榮耀女武神" },
-            { city: "台北市", url: "https://lin.ee/OnkeSxw", name: "CX-18 腕龍鞭打隨機強化組" },
-            { city: "台北市", url: "https://lin.ee/uiraH5M", name: "BXG-01 烈焰飛鳳S" },
-            { city: "台北市", url: "https://lin.ee/yAnYvar", name: "BXG-04 銀牙烈虎S" },
-            { city: "新北市", url: "https://lin.ee/Op8jS9I", name: "BX-00 暴風天馬3-70R" },
-            { city: "新北市", url: "https://lin.ee/SUqCHvm", name: "BX-10 極限衝擊戰鬥盤" },
-            { city: "新北市", url: "https://lin.ee/OSj26JJ", name: "BX-18 X旋風發射器" },
-            { city: "新北市", url: "https://lin.ee/YY093fd", name: "BX-25 戰鬥陀螺X專業收納包" },
-            { city: "桃園市", url: "https://lin.ee/UJOyslk", name: "BX-18 X旋風發射器" },
-            { city: "桃園市", url: "https://lin.ee/Oya4wBN", name: "BX-26 獨角刺心" },
-            { city: "桃園市", url: "https://lin.ee/XQtg8KH", name: "BX-33 皓戰猛虎" },
-            { city: "台中市", url: "https://lin.ee/zGvMqnX", name: "BX-10 極限衝擊戰鬥盤" },
-            { city: "台中市", url: "https://lin.ee/n3TPmTn", name: "BX-25 戰鬥陀螺X專業收納包" },
-            { city: "台中市", url: "https://lin.ee/8V9g0ju", name: "BX-40 發射器(酒紅)" },
-            { city: "高雄市", url: "https://liff.line.me/1654883387-DxN9w07M/c/01M0EH6R64EGXBNFCCX385HWSB?q=timeline_post", name: "BX-25 戰鬥陀螺X 專業收納包" },
-            { city: "高雄市", url: "https://lin.ee/ZNECVAe", name: "BX-10 極限衝戰鬥盤 850元" },
-            { city: "高雄市", url: "https://lin.ee/yOvvsVK", name: "BX-25 戰鬥陀螺專業收納包 850元" },
-            { city: "澎湖縣", url: "https://lin.ee/7tvz4ay", name: "BX-10 極限衝擊戰鬥盤" },
-            { city: "澎湖縣", url: "https://lin.ee/NogiHFe", name: "BX-32 寬型極限衝擊戰鬥盤" }
-        ];
-        // END_OF_LINKS
+        // 核心資料陣列（現在由程式啟動時動態填入）
+        let links = [];
 
-        // 全域狀態紀錄（綁定在原始陣列的 index 上）
-        let drawnStatus = [];
+        // 使用「網址 (URL)」作為記憶的 Set，不管清單順序怎麼變都不會亂
+        let drawnSet = new Set();
         try {
-            drawnStatus = JSON.parse(localStorage.getItem('funbox_drawn_status')) || [];
-            if (drawnStatus.length !== links.length) {
-                drawnStatus = new Array(links.length).fill(false);
-            }
-        } catch (e) {
-            drawnStatus = new Array(links.length).fill(false);
-        }
+            let stored = JSON.parse(localStorage.getItem('funbox_drawn_urls')) || [];
+            drawnSet = new Set(stored);
+        } catch (e) {}
 
         let currentCityFilter = "全部";
         let currentSeriesFilter = "全部";
@@ -236,15 +195,92 @@
         const resetBtn = document.getElementById('resetBtn');
         const cityFilterContainer = document.getElementById('cityFilterContainer');
         const seriesFilterContainer = document.getElementById('seriesFilterContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
 
-        // 自動從 name 欄位中提取前綴代號（例如 BX-10、UX-19、CX-18、BXG-01 等）
+        // 提取陀螺代號
         function extractSeries(name) {
             let match = name.match(/^([A-Za-z]+-\d+|[A-Za-z]+\d+)/);
             return match ? match[1].toUpperCase() : "其他";
         }
 
+        // ==========================================
+        // 核心即時爬蟲功能 (每次打開網頁都會執行)
+        // ==========================================
+        async function fetchLatestData() {
+            try {
+                // 使用 AllOrigins CORS 代理伺服器抓取目標網頁 HTML
+                const targetUrl = 'https://uxux11.github.io/funbox-line/';
+                const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
+                
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('網路回應錯誤');
+                const data = await response.json();
+                const htmlString = data.contents;
+
+                // 將抓到的字串解析為虛擬網頁 DOM
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlString, 'text/html');
+                
+                let allData = [];
+                
+                // 執行與 F12 主控台相同的精準抓取邏輯
+                doc.querySelectorAll('a').forEach(a => {
+                    let href = a.getAttribute('href') || "";
+                    let textContext = a.textContent + (a.parentElement ? a.parentElement.textContent : "");
+                    
+                    if (textContext.includes('抽獎') && (href.includes('lin.ee') || href.includes('line.me'))) {
+                        let productName = a.closest('tr')?.querySelector('td')?.innerText || 
+                                          a.parentElement.querySelector('div, span')?.innerText || 
+                                          a.parentElement.innerText;
+                        productName = productName.split('\n')[0].replace('抽獎', '').trim();
+                        if (productName.length > 50 || productName === "") productName = '抽獎項目';
+
+                        let currentCity = "未分類";
+                        let parent = a.parentElement;
+                        const cities = ['台北市', '新北市', '桃園市', '新竹市', '新竹縣', '台中市', '彰化縣', '雲林縣', '嘉義市', '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '基隆市', '苗栗縣', '南投縣'];
+                        
+                        // 往上找最近的縣市標題
+                        for (let i = 0; i < 6; i++) {
+                            if (!parent) break;
+                            let text = parent.innerText || "";
+                            let found = cities.find(c => text.includes(c));
+                            if (found) {
+                                let lines = text.split('\n');
+                                let matchedLine = lines.find(l => l.includes(found) && l.length < 10);
+                                if (matchedLine) {
+                                    currentCity = found;
+                                    break;
+                                }
+                            }
+                            parent = parent.parentElement;
+                        }
+                        
+                        allData.push({ city: currentCity, url: href, name: productName });
+                    }
+                });
+
+                // 去除重複的網址
+                let uniqueMap = new Map();
+                allData.forEach(item => uniqueMap.set(item.url, item));
+                links = Array.from(uniqueMap.values());
+
+                if (links.length === 0) throw new Error('沒有解析到任何項目');
+
+                // 抓取完成，關閉載入畫面並啟動系統
+                loadingOverlay.style.display = 'none';
+                initFilters();
+                renderList();
+
+            } catch (error) {
+                loadingText.innerText = "❌ 抓取失敗！請重新整理網頁再試一次。\n" + error.message;
+                loadingText.style.color = "#ff4444";
+                console.error("爬蟲錯誤:", error);
+            }
+        }
+
+        // 產生篩選按鈕
         function initFilters() {
-            // 1. 產生區域按鈕
             let cities = ["全部", ...new Set(links.map(item => item.city))];
             cityFilterContainer.innerHTML = '';
             cities.forEach(city => {
@@ -259,11 +295,8 @@
                 cityFilterContainer.appendChild(btn);
             });
 
-            // 2. 產生系列代號按鈕
             let seriesSet = new Set();
-            links.forEach(item => {
-                seriesSet.add(extractSeries(item.name));
-            });
+            links.forEach(item => seriesSet.add(extractSeries(item.name)));
             let seriesList = ["全部", ...Array.from(seriesSet).sort()];
             
             seriesFilterContainer.innerHTML = '';
@@ -281,9 +314,9 @@
         }
 
         function getFilteredItems() {
-            return links.map((item, idx) => ({ item, idx })).filter(obj => {
-                let matchCity = (currentCityFilter === "全部" || obj.item.city === currentCityFilter);
-                let series = extractSeries(obj.item.name);
+            return links.filter(item => {
+                let matchCity = (currentCityFilter === "全部" || item.city === currentCityFilter);
+                let series = extractSeries(item.name);
                 let matchSeries = (currentSeriesFilter === "全部" || series === currentSeriesFilter);
                 return matchCity && matchSeries;
             });
@@ -291,15 +324,16 @@
 
         function renderList() {
             listContainer.innerHTML = '';
-            let completedTotal = drawnStatus.filter(Boolean).length;
+            
+            // 計算真正的全域完成度
+            let completedTotal = links.filter(item => drawnSet.has(item.url)).length;
             
             let filtered = getFilteredItems();
-            let unDrawnFiltered = filtered.filter(obj => !drawnStatus[obj.idx]);
+            let unDrawnFiltered = filtered.filter(item => !drawnSet.has(item.url));
 
             // 渲染清單
-            filtered.forEach(obj => {
-                let itemObj = obj.item;
-                let index = obj.idx;
+            filtered.forEach((itemObj, index) => {
+                let isDrawn = drawnSet.has(itemObj.url);
 
                 let item = document.createElement('div');
                 item.className = 'store-item';
@@ -320,12 +354,16 @@
                 nameSpan.appendChild(aTag);
 
                 let statusSpan = document.createElement('span');
-                statusSpan.className = `store-status ${drawnStatus[index] ? 'status-drawn' : 'status-un-drawn'}`;
-                statusSpan.innerText = drawnStatus[index] ? '已抽選' : '未抽選';
+                statusSpan.className = `store-status ${isDrawn ? 'status-drawn' : 'status-un-drawn'}`;
+                statusSpan.innerText = isDrawn ? '已抽選' : '未抽選';
                 
-                // 點擊個別項目狀態也可以手動切換已抽/未抽
+                // 點擊狀態可手動切換
                 statusSpan.addEventListener('click', () => {
-                    drawnStatus[index] = !drawnStatus[index];
+                    if (drawnSet.has(itemObj.url)) {
+                        drawnSet.delete(itemObj.url);
+                    } else {
+                        drawnSet.add(itemObj.url);
+                    }
                     saveAndRefresh();
                 });
 
@@ -334,7 +372,7 @@
                 listContainer.appendChild(item);
             });
 
-            progressText.innerText = `全域總完成進度: ${completedTotal} / ${links.length}`;
+            progressText.innerText = `全域總完成度: ${completedTotal} / ${links.length}`;
 
             // 更新大按鈕狀態
             if (filtered.length === 0) {
@@ -342,9 +380,9 @@
                 mainBtn.disabled = true;
                 statusDiv.innerText = '請調整篩選條件';
             } else if (unDrawnFiltered.length === 0) {
-                mainBtn.innerText = `🎉\n目前篩選條件的項目都抽完囉！`;
+                mainBtn.innerText = `🎉\n目前篩選條件已全部抽完！`;
                 mainBtn.disabled = true;
-                statusDiv.innerText = `符合條件總計 ${filtered.length} 項 (已全部完成)`;
+                statusDiv.innerText = `符合條件總計 ${filtered.length} 項 (已完成)`;
             } else {
                 mainBtn.innerText = `👉 開始抽選 (剩餘 ${unDrawnFiltered.length} 項) 👈`;
                 mainBtn.disabled = false;
@@ -353,45 +391,37 @@
         }
 
         function saveAndRefresh() {
-            localStorage.setItem('funbox_drawn_status', JSON.stringify(drawnStatus));
+            localStorage.setItem('funbox_drawn_urls', JSON.stringify(Array.from(drawnSet)));
             renderList();
         }
 
-        // 大按鈕點擊：只從「目前過濾出來且尚未抽選」的項目中抽取下一個
         mainBtn.addEventListener('click', () => {
-            let unDrawnFiltered = getFilteredItems().filter(obj => !drawnStatus[obj.idx]);
+            let unDrawnFiltered = getFilteredItems().filter(item => !drawnSet.has(item.url));
 
-            if (unDrawnFiltered.length === 0) {
-                alert('沒有未抽選的項目了！');
-                return;
-            }
+            if (unDrawnFiltered.length === 0) return;
 
-            // 取得符合條件的第一個未抽選項目
-            let targetObj = unDrawnFiltered[0];
-            let targetIndex = targetObj.idx;
-
-            // 標記為已抽選
-            drawnStatus[targetIndex] = true;
+            let targetItem = unDrawnFiltered[0];
+            drawnSet.add(targetItem.url);
             saveAndRefresh();
 
             // 開啟抽獎連結
             let a = document.createElement('a');
-            a.href = targetObj.item.url;
+            a.href = targetItem.url;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         });
 
         resetBtn.addEventListener('click', () => {
-            if (confirm('確定要清空所有已抽選的記憶紀錄嗎？')) {
-                drawnStatus = new Array(links.length).fill(false);
-                localStorage.removeItem('funbox_drawn_status');
+            if (confirm('確定要清空所有已抽選的記憶紀錄嗎？\n(清除後所有項目都會變成未抽選)')) {
+                drawnSet.clear();
+                localStorage.removeItem('funbox_drawn_urls');
                 renderList();
             }
         });
 
-        initFilters();
-        renderList();
+        // 啟動時執行爬蟲
+        fetchLatestData();
     </script>
 </body>
 </html>
