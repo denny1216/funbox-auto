@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funbox 自動化抽獎面板（即時抓取版）</title>
+    <title>Funbox 自動化抽獎面板（搜尋引擎版）</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -71,7 +71,7 @@
         .filter-title {
             font-size: 13px;
             color: #aaa;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .filter-container {
             display: flex;
@@ -93,6 +93,27 @@
             border-color: #06C755;
             font-weight: bold;
         }
+        
+        /* 搜尋框樣式 */
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background-color: #222;
+            color: white;
+            font-size: 15px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus {
+            border-color: #06C755;
+        }
+        .search-input::placeholder {
+            color: #888;
+        }
+
         #listContainer {
             margin-top: 20px;
             text-align: left;
@@ -146,7 +167,6 @@
 </head>
 <body>
 
-    <!-- 載入中遮罩 -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner"></div>
         <div style="margin-top: 15px; font-size: 18px; color: white;" id="loadingText">正在向 Funbox 即時抓取最新抽獎清單...</div>
@@ -158,13 +178,19 @@
             <button class="tool-btn" id="resetBtn">🔄 全部重設紀錄</button>
         </div>
 
+        <!-- 關鍵字搜尋框 -->
+        <div class="filter-section">
+            <div class="filter-title">🔍 關鍵字搜尋 (支援即時過濾)</div>
+            <input type="text" id="searchInput" class="search-input" placeholder="輸入陀螺名稱、縣市或任何關鍵字 (例如: 惡魔, 台北, 酒紅...)">
+        </div>
+
         <div class="filter-section">
             <div class="filter-title">📍 區域篩選</div>
             <div class="filter-container" id="cityFilterContainer"></div>
         </div>
 
         <div class="filter-section">
-            <div class="filter-title">🏷️ 代號/陀螺篩選</div>
+            <div class="filter-title">🏷️ 代號篩選</div>
             <div class="filter-container" id="seriesFilterContainer"></div>
         </div>
 
@@ -175,10 +201,8 @@
     </div>
 
     <script>
-        // 核心資料陣列（現在由程式啟動時動態填入）
         let links = [];
 
-        // 使用「網址 (URL)」作為記憶的 Set，不管清單順序怎麼變都不會亂
         let drawnSet = new Set();
         try {
             let stored = JSON.parse(localStorage.getItem('funbox_drawn_urls')) || [];
@@ -187,6 +211,7 @@
 
         let currentCityFilter = "全部";
         let currentSeriesFilter = "全部";
+        let currentSearchTerm = ""; // 紀錄目前的搜尋文字
 
         const mainBtn = document.getElementById('mainBtn');
         const statusDiv = document.getElementById('status');
@@ -195,21 +220,17 @@
         const resetBtn = document.getElementById('resetBtn');
         const cityFilterContainer = document.getElementById('cityFilterContainer');
         const seriesFilterContainer = document.getElementById('seriesFilterContainer');
+        const searchInput = document.getElementById('searchInput');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
 
-        // 提取陀螺代號
         function extractSeries(name) {
             let match = name.match(/^([A-Za-z]+-\d+|[A-Za-z]+\d+)/);
             return match ? match[1].toUpperCase() : "其他";
         }
 
-        // ==========================================
-        // 核心即時爬蟲功能 (每次打開網頁都會執行)
-        // ==========================================
         async function fetchLatestData() {
             try {
-                // 使用 AllOrigins CORS 代理伺服器抓取目標網頁 HTML
                 const targetUrl = 'https://uxux11.github.io/funbox-line/';
                 const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
                 
@@ -218,13 +239,11 @@
                 const data = await response.json();
                 const htmlString = data.contents;
 
-                // 將抓到的字串解析為虛擬網頁 DOM
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlString, 'text/html');
                 
                 let allData = [];
                 
-                // 執行與 F12 主控台相同的精準抓取邏輯
                 doc.querySelectorAll('a').forEach(a => {
                     let href = a.getAttribute('href') || "";
                     let textContext = a.textContent + (a.parentElement ? a.parentElement.textContent : "");
@@ -240,7 +259,6 @@
                         let parent = a.parentElement;
                         const cities = ['台北市', '新北市', '桃園市', '新竹市', '新竹縣', '台中市', '彰化縣', '雲林縣', '嘉義市', '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '基隆市', '苗栗縣', '南投縣'];
                         
-                        // 往上找最近的縣市標題
                         for (let i = 0; i < 6; i++) {
                             if (!parent) break;
                             let text = parent.innerText || "";
@@ -260,14 +278,12 @@
                     }
                 });
 
-                // 去除重複的網址
                 let uniqueMap = new Map();
                 allData.forEach(item => uniqueMap.set(item.url, item));
                 links = Array.from(uniqueMap.values());
 
                 if (links.length === 0) throw new Error('沒有解析到任何項目');
 
-                // 抓取完成，關閉載入畫面並啟動系統
                 loadingOverlay.style.display = 'none';
                 initFilters();
                 renderList();
@@ -279,7 +295,6 @@
             }
         }
 
-        // 產生篩選按鈕
         function initFilters() {
             let cities = ["全部", ...new Set(links.map(item => item.city))];
             cityFilterContainer.innerHTML = '';
@@ -313,25 +328,42 @@
             });
         }
 
+        // 監聽搜尋框的輸入事件，做到即時過濾
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value.trim().toLowerCase();
+            renderList();
+        });
+
+        // 取出符合所有條件的項目
         function getFilteredItems() {
             return links.filter(item => {
+                // 1. 判斷區域是否符合
                 let matchCity = (currentCityFilter === "全部" || item.city === currentCityFilter);
+                
+                // 2. 判斷代號是否符合
                 let series = extractSeries(item.name);
                 let matchSeries = (currentSeriesFilter === "全部" || series === currentSeriesFilter);
-                return matchCity && matchSeries;
+                
+                // 3. 判斷關鍵字搜尋是否符合
+                let matchSearch = true;
+                if (currentSearchTerm !== "") {
+                    // 把縣市跟名稱結合在一起搜尋，這樣搜地區或名稱都可以
+                    let textToSearch = (item.city + " " + item.name).toLowerCase();
+                    matchSearch = textToSearch.includes(currentSearchTerm);
+                }
+
+                return matchCity && matchSeries && matchSearch;
             });
         }
 
         function renderList() {
             listContainer.innerHTML = '';
             
-            // 計算真正的全域完成度
             let completedTotal = links.filter(item => drawnSet.has(item.url)).length;
             
             let filtered = getFilteredItems();
             let unDrawnFiltered = filtered.filter(item => !drawnSet.has(item.url));
 
-            // 渲染清單
             filtered.forEach((itemObj, index) => {
                 let isDrawn = drawnSet.has(itemObj.url);
 
@@ -357,7 +389,6 @@
                 statusSpan.className = `store-status ${isDrawn ? 'status-drawn' : 'status-un-drawn'}`;
                 statusSpan.innerText = isDrawn ? '已抽選' : '未抽選';
                 
-                // 點擊狀態可手動切換
                 statusSpan.addEventListener('click', () => {
                     if (drawnSet.has(itemObj.url)) {
                         drawnSet.delete(itemObj.url);
@@ -374,11 +405,10 @@
 
             progressText.innerText = `全域總完成度: ${completedTotal} / ${links.length}`;
 
-            // 更新大按鈕狀態
             if (filtered.length === 0) {
                 mainBtn.innerText = `⚠️ 沒有符合條件的項目`;
                 mainBtn.disabled = true;
-                statusDiv.innerText = '請調整篩選條件';
+                statusDiv.innerText = '請調整篩選或搜尋關鍵字';
             } else if (unDrawnFiltered.length === 0) {
                 mainBtn.innerText = `🎉\n目前篩選條件已全部抽完！`;
                 mainBtn.disabled = true;
@@ -404,7 +434,6 @@
             drawnSet.add(targetItem.url);
             saveAndRefresh();
 
-            // 開啟抽獎連結
             let a = document.createElement('a');
             a.href = targetItem.url;
             document.body.appendChild(a);
@@ -420,7 +449,6 @@
             }
         });
 
-        // 啟動時執行爬蟲
         fetchLatestData();
     </script>
 </body>
