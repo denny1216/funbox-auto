@@ -1,0 +1,31 @@
+name: 自動更新抽獎清單
+
+on:
+  schedule:
+    - cron: '0 */0.01 * * *' # 每 6 小時自動更新一次
+  workflow_dispatch: # 支援手動觸發
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 取得專案程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Node.js 環境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 執行更新腳本
+        run: node update.js
+
+      - name: 自動提交並推送到 GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "🤖 GitHub機器人自動更新抽獎清單" || exit 0
+          git push
