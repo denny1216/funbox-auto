@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funbox 手動貼上版抽獎面板</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1e1e1e;
+            color: white;
+            text-align: center;
+        }
+        #mainBtn {
+            width: 85%;
+            height: 250px;
+            font-size: 36px;
+            font-weight: bold;
+            border-radius: 24px;
+            background-color: #06C755;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(6, 199, 85, 0.4);
+            transition: transform 0.1s;
+            line-height: 1.5;
+        }
+        #mainBtn:active {
+            transform: scale(0.95);
+        }
+        #mainBtn:disabled {
+            background-color: #555;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        #status {
+            margin-top: 30px;
+            font-size: 24px;
+            color: #00ff00;
+        }
+        #resetBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="resetBtn">🔄 重新開始</button>
+    <button id="mainBtn">👉 點我抽獎 👈<br>(將跳轉至 LINE)</button>
+    <div id="status"></div>
+
+    <script>
+        // 這裡直接把抽獎網址放進來（你可以隨時增加或修改）
+        // 只要把從 Funbox 複製到的 LINE 網址貼在下面這串雙引號裡面即可
+        let links = [
+            "https://line.me/R/ti/p/@453cqkyj", // 台北地下街16號
+            "https://line.me/R/ti/p/@022itqlw", // 新楠家樂福
+            "https://line.me/R/ti/p/@162fxyom", // 台南新仁家樂福
+            "https://line.me/R/ti/p/@766sgllj", // 彰化家樂福
+            "https://line.me/R/ti/p/@958tzuco"  // 員林大潤發
+            // 你可以照這個格式繼續往下貼上其他門市的 LINE 連結
+        ];
+
+        let currentIndex = parseInt(localStorage.getItem('funbox_manual_index') || '0');
+
+        const mainBtn = document.getElementById('mainBtn');
+        const statusDiv = document.getElementById('status');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function updateUI() {
+            if (currentIndex >= links.length) {
+                mainBtn.innerText = '🎉\n全部門市抽完囉！';
+                mainBtn.disabled = true;
+                statusDiv.innerText = `最終進度：${links.length} / ${links.length}`;
+            } else {
+                mainBtn.innerText = '👉 點我抽獎 👈\n(將跳轉至 LINE)';
+                mainBtn.disabled = false;
+                statusDiv.innerText = `目前進度：${currentIndex + 1} / ${links.length}`;
+            }
+        }
+
+        mainBtn.addEventListener('click', () => {
+            if (currentIndex < links.length) {
+                let currentUrl = links[currentIndex];
+                
+                currentIndex++;
+                localStorage.setItem('funbox_manual_index', currentIndex.toString());
+                updateUI();
+                
+                let a = document.createElement('a');
+                a.href = currentUrl;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if(confirm('確定要從第 1 家重新開始抽嗎？')) {
+                localStorage.removeItem('funbox_manual_index');
+                currentIndex = 0;
+                updateUI();
+            }
+        });
+
+        updateUI();
+    </script>
+</body>
+</html>
