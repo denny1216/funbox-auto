@@ -1,0 +1,8 @@
+{
+  "name": "funbox-auto-update",
+  "version": "1.0.0",
+  "main": "update.js",
+  "scripts": {
+    "update": "node update.js"
+  }
+}
