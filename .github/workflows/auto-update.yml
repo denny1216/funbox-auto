@@ -2,7 +2,7 @@ name: 自動更新抽獎清單
 
 on:
   schedule:
-    - cron: '0 * * * *' # 每 1 小時自動更新一次
+    - cron: '0 * * * *' # 每小時更新一次
   workflow_dispatch: # 支援手動觸發
 
 jobs:
@@ -18,6 +18,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: 安裝相依套件 (cheerio)
+        run: npm install  # <--- 加上這行，機器人才會去讀 package.json 安裝 cheerio
 
       - name: 執行更新腳本
         run: node update.js
