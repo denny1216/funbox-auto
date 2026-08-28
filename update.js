@@ -1,5 +1,6 @@
 const fs = require('fs');
 const https = require('https');
+const cheerio = require('cheerio'); // 引入瀏覽器 DOM 模擬器
 
 const TARGET_URL = 'https://uxux11.github.io/funbox-line/';
 
@@ -17,50 +18,67 @@ async function main() {
     try {
         console.log('🔄 正在連線取得最新頁面...');
         const html = await fetchPage(TARGET_URL);
-        let extractedLinks = [];
-        
-        // 正規表達式精準抓取 <a> 標籤
-        const aRegex = /<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis;
-        let match;
 
-        while ((match = aRegex.exec(html)) !== null) {
-            let href = match[1];
-            let innerText = match[2].replace(/<[^>]*>/g, '').trim();
+        // 使用 cheerio 載入 HTML，完美支援類似瀏覽器的 DOM 操作
+        const $ = cheerio.load(html);
+        let allData = [];
 
-            if ((href.includes('lin.ee') || href.includes('line.me')) && (innerText.includes('抽獎') || innerText.length > 2)) {
-                let cityName = "未分類";
-                const cities = ['台北市', '新北市', '桃園市', '新竹市', '新竹縣', '台中市', '彰化縣', '雲林縣', '嘉義市', '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '基隆市', '苗栗縣', '南投縣'];
+        // 對應你在 F12 執行的邏輯
+        $('a').each((i, el) => {
+            let $a = $(el);
+            let text = $a.text() + ($a.parent().text() || "");
+            let href = $a.attr('href');
+
+            if (text.includes('抽獎') && href) {
+                let url = href;
                 
-                // 從原始碼往前推算所屬縣市
-                let contextStr = html.substring(Math.max(0, match.index - 500), match.index);
-                for (let c of cities) {
-                    if (contextStr.includes(c)) {
-                        cityName = c;
-                        break;
+                // 商品名稱抓取
+                let productName = $a.closest('tr').find('td').text() || 
+                                  $a.parent().find('div, span').text() || 
+                                  '抽獎項目';
+                productName = productName.split('\n')[0].replace('抽獎', '').trim();
+                if (productName === '' || productName.length > 40) productName = '抽獎項目';
+
+                // 暴力往上尋找最近的「縣市」名稱
+                let currentCity = "未分類";
+                let $parent = $a.parent();
+                const targetCities = ['台北市', '新北市', '桃園市', '新竹市', '新竹縣', '台中市', '彰化縣', '雲林縣', '嘉義市', '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '基隆市', '苗栗縣', '南投縣'];
+
+                for (let i = 0; i < 6; i++) {
+                    if ($parent.length === 0) break;
+                    let parentText = $parent.text() || "";
+                    
+                    let found = targetCities.find(c => parentText.includes(c));
+                    if (found) {
+                        let lines = parentText.split('\n');
+                        let matchedLine = lines.find(l => l.includes(found) && l.length < 10);
+                        if (matchedLine) {
+                            currentCity = found;
+                            break;
+                        }
                     }
+                    $parent = $parent.parent();
                 }
 
-                let productName = innerText.replace('抽獎', '').trim();
-                if (!productName || productName.length > 50) productName = '抽獎項目';
-
-                extractedLinks.push({ city: cityName, url: href, name: productName });
+                allData.push({ city: currentCity, url: url, name: productName });
             }
-        }
+        });
 
-        // 去重複
+        // 去除重複
         let uniqueMap = new Map();
-        extractedLinks.forEach(item => uniqueMap.set(item.url, item));
-        let newLinks = Array.from(uniqueMap.values());
+        allData.forEach(item => uniqueMap.set(item.url, item));
+        let uniqueList = Array.from(uniqueMap.values());
 
-        if (newLinks.length === 0) {
-            console.log('⚠️ 沒有抓到有效連結，取消更新。');
+        if (uniqueList.length === 0) {
+            console.log('⚠️ 沒有抓到任何資料，取消更新以保護舊檔案。');
             return;
         }
 
-        console.log(`✅ 成功抓取 ${newLinks.length} 筆，正在寫入 index.html...`);
+        console.log(`✅ 成功抓取 ${uniqueList.length} 筆資料！正在寫入 index.html...`);
 
+        // 讀取並寫入 index.html
         let indexHtml = fs.readFileSync('index.html', 'utf8');
-        let linksBody = newLinks.map(item => `            { city: "${item.city}", url: "${item.url}", name: "${item.name}" }`).join(',\n');
+        let linksBody = uniqueList.map(item => `            { city: "${item.city}", url: "${item.url}", name: "${item.name}" }`).join(',\n');
         let newLinksBlock = `// START_OF_LINKS\n        const links = [\n${linksBody}\n        ];\n        // END_OF_LINKS`;
 
         let updatedHtml = indexHtml.replace(/\/\/ START_OF_LINKS[\s\S]*?\/\/ END_OF_LINKS/, newLinksBlock);
@@ -68,7 +86,7 @@ async function main() {
         console.log('🎉 自動更新完成！');
 
     } catch (error) {
-        console.error('❌ 錯誤:', error);
+        console.error('❌ 執行發生錯誤:', error);
         process.exit(1);
     }
 }
