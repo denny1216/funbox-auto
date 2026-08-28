@@ -2,7 +2,7 @@ name: 自動更新抽獎清單
 
 on:
   schedule:
-    - cron: '0 */0.01 * * *' # 每 6 小時自動更新一次
+    - cron: '0 * * * *' # 每 1 小時自動更新一次
   workflow_dispatch: # 支援手動觸發
 
 jobs:
