@@ -3,185 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funbox 自動化抽獎面板（搜尋引擎版）</title>
+    <title>Funbox 自動化抽獎面板（穩定極速版）</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            background-color: #1e1e1e;
-            color: white;
-            text-align: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 700px;
-        }
-        #mainBtn {
-            width: 100%;
-            height: 140px;
-            font-size: 24px;
-            font-weight: bold;
-            border-radius: 20px;
-            background-color: #06C755;
-            color: white;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 10px 25px rgba(6, 199, 85, 0.4);
-            margin-top: 15px;
-            transition: 0.3s;
-        }
-        #mainBtn:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        #status {
-            margin-top: 12px;
-            font-size: 16px;
-            color: #00ff00;
-        }
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            margin-top: 15px;
-        }
-        button.tool-btn {
-            padding: 6px 12px;
-            background-color: #444;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; background-color: #1e1e1e; color: white; text-align: center; }
+        .container { width: 100%; max-width: 700px; }
+        #mainBtn { width: 100%; height: 140px; font-size: 24px; font-weight: bold; border-radius: 20px; background-color: #06C755; color: white; border: none; cursor: pointer; box-shadow: 0 10px 25px rgba(6, 199, 85, 0.4); margin-top: 15px; transition: 0.3s; }
+        #mainBtn:disabled { background-color: #555; cursor: not-allowed; box-shadow: none; }
+        #status { margin-top: 12px; font-size: 16px; color: #00ff00; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 15px; }
+        button.tool-btn { padding: 6px 12px; background-color: #444; color: white; border: none; border-radius: 6px; cursor: pointer; }
         button.tool-btn:hover { background-color: #666; }
-        
-        .filter-section {
-            background: #2a2a2a;
-            border-radius: 12px;
-            padding: 12px;
-            margin-top: 15px;
-            text-align: left;
-        }
-        .filter-title {
-            font-size: 13px;
-            color: #aaa;
-            margin-bottom: 8px;
-        }
-        .filter-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        .filter-btn {
-            padding: 4px 10px;
-            background-color: #333;
-            color: #ccc;
-            border: 1px solid #555;
-            border-radius: 15px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .filter-btn.active {
-            background-color: #06C755;
-            color: white;
-            border-color: #06C755;
-            font-weight: bold;
-        }
-        
-        /* 搜尋框樣式 */
-        .search-input {
-            width: 100%;
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 1px solid #444;
-            background-color: #222;
-            color: white;
-            font-size: 15px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .search-input:focus {
-            border-color: #06C755;
-        }
-        .search-input::placeholder {
-            color: #888;
-        }
-
-        #listContainer {
-            margin-top: 20px;
-            text-align: left;
-            background: #2a2a2a;
-            border-radius: 12px;
-            padding: 15px;
-            max-height: 350px;
-            overflow-y: auto;
-        }
-        .store-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 10px;
-            border-bottom: 1px solid #3c3c3c;
-            font-size: 14px;
-        }
+        .filter-section { background: #2a2a2a; border-radius: 12px; padding: 12px; margin-top: 15px; text-align: left; }
+        .filter-title { font-size: 13px; color: #aaa; margin-bottom: 8px; }
+        .filter-container { display: flex; flex-wrap: wrap; gap: 5px; }
+        .filter-btn { padding: 4px 10px; background-color: #333; color: #ccc; border: 1px solid #555; border-radius: 15px; cursor: pointer; font-size: 12px; }
+        .filter-btn.active { background-color: #06C755; color: white; border-color: #06C755; font-weight: bold; }
+        .search-input { width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid #444; background-color: #222; color: white; font-size: 15px; box-sizing: border-box; outline: none; }
+        .search-input:focus { border-color: #06C755; }
+        #listContainer { margin-top: 20px; text-align: left; background: #2a2a2a; border-radius: 12px; padding: 15px; max-height: 350px; overflow-y: auto; }
+        .store-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #3c3c3c; font-size: 14px; }
         .store-name a { color: #4da6ff; text-decoration: none; }
         .store-name a:hover { text-decoration: underline; }
-        .city-tag {
-            background-color: #444;
-            color: #ffcc00;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            margin-right: 6px;
-        }
-        .store-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-left: 10px;
-            flex-shrink: 0;
-        }
+        .city-tag { background-color: #444; color: #ffcc00; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 6px; }
+        .store-status { padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; margin-left: 10px; flex-shrink: 0; }
         .status-un-drawn { background-color: #ff4444; color: white; }
         .status-drawn { background-color: #2e7d32; color: #ccc; }
-        
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 1000;
-        }
-        .spinner {
-            border: 4px solid #f3f3f3; border-top: 4px solid #06C755;
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <div style="margin-top: 15px; font-size: 18px; color: white;" id="loadingText">正在向 Funbox 即時抓取最新抽獎清單...</div>
-    </div>
-
     <div class="container">
         <div class="toolbar">
             <span id="progressText" style="font-size: 15px; color: #aaa;">載入中...</span>
             <button class="tool-btn" id="resetBtn">🔄 全部重設紀錄</button>
         </div>
 
-        <!-- 關鍵字搜尋框 -->
         <div class="filter-section">
             <div class="filter-title">🔍 關鍵字搜尋 (支援即時過濾)</div>
-            <input type="text" id="searchInput" class="search-input" placeholder="輸入陀螺名稱、縣市或任何關鍵字 (例如: 惡魔, 台北, 酒紅...)">
+            <input type="text" id="searchInput" class="search-input" placeholder="輸入陀螺名稱、縣市或任何關鍵字...">
         </div>
 
         <div class="filter-section">
@@ -194,14 +52,18 @@
             <div class="filter-container" id="seriesFilterContainer"></div>
         </div>
 
-        <button id="mainBtn" disabled>👉 載入中... 👈</button>
-        <div id="status">正在同步資料</div>
+        <button id="mainBtn">👉 準備抽選 👈</button>
+        <div id="status">準備中</div>
 
         <div id="listContainer"></div>
     </div>
 
     <script>
-        let links = [];
+        // START_OF_LINKS
+        const links = [
+            { city: "系統提示", url: "#", name: "等待 GitHub 機器人自動抓取中..." }
+        ];
+        // END_OF_LINKS
 
         let drawnSet = new Set();
         try {
@@ -211,7 +73,7 @@
 
         let currentCityFilter = "全部";
         let currentSeriesFilter = "全部";
-        let currentSearchTerm = ""; // 紀錄目前的搜尋文字
+        let currentSearchTerm = "";
 
         const mainBtn = document.getElementById('mainBtn');
         const statusDiv = document.getElementById('status');
@@ -221,78 +83,10 @@
         const cityFilterContainer = document.getElementById('cityFilterContainer');
         const seriesFilterContainer = document.getElementById('seriesFilterContainer');
         const searchInput = document.getElementById('searchInput');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const loadingText = document.getElementById('loadingText');
 
         function extractSeries(name) {
             let match = name.match(/^([A-Za-z]+-\d+|[A-Za-z]+\d+)/);
             return match ? match[1].toUpperCase() : "其他";
-        }
-
-        async function fetchLatestData() {
-            try {
-                const targetUrl = 'https://uxux11.github.io/funbox-line/';
-                const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl);
-                
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('網路回應錯誤');
-                const data = await response.json();
-                const htmlString = data.contents;
-
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlString, 'text/html');
-                
-                let allData = [];
-                
-                doc.querySelectorAll('a').forEach(a => {
-                    let href = a.getAttribute('href') || "";
-                    let textContext = a.textContent + (a.parentElement ? a.parentElement.textContent : "");
-                    
-                    if (textContext.includes('抽獎') && (href.includes('lin.ee') || href.includes('line.me'))) {
-                        let productName = a.closest('tr')?.querySelector('td')?.innerText || 
-                                          a.parentElement.querySelector('div, span')?.innerText || 
-                                          a.parentElement.innerText;
-                        productName = productName.split('\n')[0].replace('抽獎', '').trim();
-                        if (productName.length > 50 || productName === "") productName = '抽獎項目';
-
-                        let currentCity = "未分類";
-                        let parent = a.parentElement;
-                        const cities = ['台北市', '新北市', '桃園市', '新竹市', '新竹縣', '台中市', '彰化縣', '雲林縣', '嘉義市', '台南市', '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '台東縣', '澎湖縣', '基隆市', '苗栗縣', '南投縣'];
-                        
-                        for (let i = 0; i < 6; i++) {
-                            if (!parent) break;
-                            let text = parent.innerText || "";
-                            let found = cities.find(c => text.includes(c));
-                            if (found) {
-                                let lines = text.split('\n');
-                                let matchedLine = lines.find(l => l.includes(found) && l.length < 10);
-                                if (matchedLine) {
-                                    currentCity = found;
-                                    break;
-                                }
-                            }
-                            parent = parent.parentElement;
-                        }
-                        
-                        allData.push({ city: currentCity, url: href, name: productName });
-                    }
-                });
-
-                let uniqueMap = new Map();
-                allData.forEach(item => uniqueMap.set(item.url, item));
-                links = Array.from(uniqueMap.values());
-
-                if (links.length === 0) throw new Error('沒有解析到任何項目');
-
-                loadingOverlay.style.display = 'none';
-                initFilters();
-                renderList();
-
-            } catch (error) {
-                loadingText.innerText = "❌ 抓取失敗！請重新整理網頁再試一次。\n" + error.message;
-                loadingText.style.color = "#ff4444";
-                console.error("爬蟲錯誤:", error);
-            }
         }
 
         function initFilters() {
@@ -302,11 +96,7 @@
                 let btn = document.createElement('button');
                 btn.className = `filter-btn ${city === currentCityFilter ? 'active' : ''}`;
                 btn.innerText = city;
-                btn.addEventListener('click', () => {
-                    currentCityFilter = city;
-                    initFilters();
-                    renderList();
-                });
+                btn.addEventListener('click', () => { currentCityFilter = city; initFilters(); renderList(); });
                 cityFilterContainer.appendChild(btn);
             });
 
@@ -319,85 +109,60 @@
                 let btn = document.createElement('button');
                 btn.className = `filter-btn ${series === currentSeriesFilter ? 'active' : ''}`;
                 btn.innerText = series;
-                btn.addEventListener('click', () => {
-                    currentSeriesFilter = series;
-                    initFilters();
-                    renderList();
-                });
+                btn.addEventListener('click', () => { currentSeriesFilter = series; initFilters(); renderList(); });
                 seriesFilterContainer.appendChild(btn);
             });
         }
 
-        // 監聽搜尋框的輸入事件，做到即時過濾
         searchInput.addEventListener('input', (e) => {
             currentSearchTerm = e.target.value.trim().toLowerCase();
             renderList();
         });
 
-        // 取出符合所有條件的項目
         function getFilteredItems() {
             return links.filter(item => {
-                // 1. 判斷區域是否符合
                 let matchCity = (currentCityFilter === "全部" || item.city === currentCityFilter);
-                
-                // 2. 判斷代號是否符合
                 let series = extractSeries(item.name);
                 let matchSeries = (currentSeriesFilter === "全部" || series === currentSeriesFilter);
-                
-                // 3. 判斷關鍵字搜尋是否符合
                 let matchSearch = true;
                 if (currentSearchTerm !== "") {
-                    // 把縣市跟名稱結合在一起搜尋，這樣搜地區或名稱都可以
                     let textToSearch = (item.city + " " + item.name).toLowerCase();
                     matchSearch = textToSearch.includes(currentSearchTerm);
                 }
-
                 return matchCity && matchSeries && matchSearch;
             });
         }
 
         function renderList() {
             listContainer.innerHTML = '';
-            
             let completedTotal = links.filter(item => drawnSet.has(item.url)).length;
-            
             let filtered = getFilteredItems();
             let unDrawnFiltered = filtered.filter(item => !drawnSet.has(item.url));
 
             filtered.forEach((itemObj, index) => {
                 let isDrawn = drawnSet.has(itemObj.url);
-
                 let item = document.createElement('div');
                 item.className = 'store-item';
-
                 let nameSpan = document.createElement('span');
                 nameSpan.className = 'store-name';
-                
                 let cityTag = document.createElement('span');
                 cityTag.className = 'city-tag';
                 cityTag.innerText = itemObj.city;
-
                 let aTag = document.createElement('a');
                 aTag.href = itemObj.url;
                 aTag.target = '_blank';
                 aTag.innerText = `${index + 1}. ${itemObj.name}`;
-
                 nameSpan.appendChild(cityTag);
                 nameSpan.appendChild(aTag);
-
                 let statusSpan = document.createElement('span');
                 statusSpan.className = `store-status ${isDrawn ? 'status-drawn' : 'status-un-drawn'}`;
                 statusSpan.innerText = isDrawn ? '已抽選' : '未抽選';
                 
                 statusSpan.addEventListener('click', () => {
-                    if (drawnSet.has(itemObj.url)) {
-                        drawnSet.delete(itemObj.url);
-                    } else {
-                        drawnSet.add(itemObj.url);
-                    }
+                    if (drawnSet.has(itemObj.url)) { drawnSet.delete(itemObj.url); } 
+                    else { drawnSet.add(itemObj.url); }
                     saveAndRefresh();
                 });
-
                 item.appendChild(nameSpan);
                 item.appendChild(statusSpan);
                 listContainer.appendChild(item);
@@ -427,13 +192,10 @@
 
         mainBtn.addEventListener('click', () => {
             let unDrawnFiltered = getFilteredItems().filter(item => !drawnSet.has(item.url));
-
             if (unDrawnFiltered.length === 0) return;
-
             let targetItem = unDrawnFiltered[0];
             drawnSet.add(targetItem.url);
             saveAndRefresh();
-
             let a = document.createElement('a');
             a.href = targetItem.url;
             document.body.appendChild(a);
@@ -442,14 +204,15 @@
         });
 
         resetBtn.addEventListener('click', () => {
-            if (confirm('確定要清空所有已抽選的記憶紀錄嗎？\n(清除後所有項目都會變成未抽選)')) {
+            if (confirm('確定要清空所有已抽選的記憶紀錄嗎？')) {
                 drawnSet.clear();
                 localStorage.removeItem('funbox_drawn_urls');
                 renderList();
             }
         });
 
-        fetchLatestData();
+        initFilters();
+        renderList();
     </script>
 </body>
 </html>
